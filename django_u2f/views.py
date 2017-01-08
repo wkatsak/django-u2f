@@ -30,6 +30,7 @@ from .models import TOTPDevice
 class U2FLoginView(FormView):
     form_class = AuthenticationForm
     template_name = 'u2f/login.html'
+    verify_url = reverse_lazy('u2f:verify-second-factor')
 
     @property
     def is_admin(self):
@@ -52,7 +53,7 @@ class U2FLoginView(FormView):
             self.request.session['u2f_pre_verify_user_pk'] = user.pk
             self.request.session['u2f_pre_verify_user_backend'] = user.backend
 
-            verify_url = reverse('u2f:verify-second-factor')
+            verify_url = self.verify_url
             redirect_to = self.request.POST.get(auth.REDIRECT_FIELD_NAME,
                                                 self.request.GET.get(auth.REDIRECT_FIELD_NAME, ''))
             params = {}
@@ -70,7 +71,6 @@ class U2FLoginView(FormView):
         kwargs[auth.REDIRECT_FIELD_NAME] = self.request.GET.get(auth.REDIRECT_FIELD_NAME, '')
         kwargs.update(self.kwargs.get('extra_context', {}))
         return kwargs
-
 
 class AdminU2FLoginView(U2FLoginView):
     template_name = 'admin/login.html'
@@ -143,6 +143,7 @@ class VerifySecondFactorView(TemplateView):
         'backup': BackupCodeForm,
         'totp': TOTPForm,
     }
+    login_url = reverse_lazy('u2f:login')
 
     def get_user(self):
         try:
@@ -160,7 +161,7 @@ class VerifySecondFactorView(TemplateView):
     def dispatch(self, request, *args, **kwargs):
         self.user = self.get_user()
         if self.user is None:
-            return HttpResponseRedirect(reverse('u2f:login'))
+            return HttpResponseRedirect(self.login_url)
         return super(VerifySecondFactorView, self).dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
@@ -229,6 +230,7 @@ class TwoFactorSettingsView(TemplateView):
 
 class KeyManagementView(ListView):
     template_name = 'u2f/key_list.html'
+    success_url = reverse_lazy('u2f:u2f-keys')
 
     def get_queryset(self):
         return self.request.user.u2f_keys.all()
@@ -241,8 +243,7 @@ class KeyManagementView(ListView):
             messages.success(request, _("Key removed."))
         else:
             messages.success(request, _("Key removed. Two-factor auth disabled."))
-        return HttpResponseRedirect(reverse('u2f:u2f-keys'))
-
+        return HttpResponseRedirect(self.success_url)
 
 class BackupCodesView(ListView):
     template_name = 'u2f/backup_codes.html'
@@ -335,6 +336,7 @@ class AddTOTPDeviceView(FormView):
 
 class TOTPDeviceManagementView(ListView):
     template_name = 'u2f/totpdevice_list.html'
+    success_url = reverse_lazy('u2f:totp-devices')
 
     def get_queryset(self):
         return self.request.user.totp_devices.all()
@@ -344,7 +346,7 @@ class TOTPDeviceManagementView(ListView):
         device = get_object_or_404(self.get_queryset(), pk=self.request.POST['device_id'])
         device.delete()
         messages.success(request, _("Device removed."))
-        return HttpResponseRedirect(reverse('u2f:totp-devices'))
+        return HttpResponseRedirect(self.success_url)
 
 
 add_key = login_required(AddKeyView.as_view())
