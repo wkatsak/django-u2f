@@ -7,6 +7,7 @@ from six.moves.urllib.parse import quote
 from django.views.generic import FormView, ListView, TemplateView
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import load_backend
+from django.contrib.auth.views import login as auth_login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.contrib import auth, messages
@@ -31,6 +32,7 @@ class U2FLoginView(FormView):
     form_class = AuthenticationForm
     template_name = 'u2f/login.html'
     verify_url = reverse_lazy('u2f:verify-second-factor')
+    normal_login_view = auth_login
 
     @property
     def is_admin(self):
@@ -48,7 +50,7 @@ class U2FLoginView(FormView):
         user = form.get_user()
         if not self.requires_two_factor(user):
             # no keys registered, use single-factor auth
-            return original_auth_login_view(self.request, **self.kwargs)
+            return self.normal_login_view(self.request, **self.kwargs)
         else:
             self.request.session['u2f_pre_verify_user_pk'] = user.pk
             self.request.session['u2f_pre_verify_user_backend'] = user.backend

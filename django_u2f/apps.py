@@ -14,4 +14,5 @@ class U2FConfig(AppConfig):
         auth_views.login = u2f_views.U2FLoginView.as_view()
 
     def ready(self):
-        self.monkeypatch_login_view()
+        #self.monkeypatch_login_view()
+        pass
