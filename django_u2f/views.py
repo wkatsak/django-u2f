@@ -267,9 +267,12 @@ class AddTOTPDeviceView(FormView):
     def gen_key(self):
         return os.urandom(20)
 
+    def get_issuer(self):
+        return get_current_site(self.request).name
+
     def get_otpauth_url(self, key):
         secret = b32encode(key)
-        issuer = get_current_site(self.request).name
+        issuer = self.get_issuer()
 
         params = OrderedDict([
             ('secret', secret),
